@@ -1,14 +1,9 @@
 import { type NextPage } from "next";
 import Head from "next/head";
 import { ChangeEvent, useState, useEffect } from "react";
-import { CallClient, CallAgent } from "@azure/communication-calling";
-import { AzureCommunicationTokenCredential } from "@azure/communication-common";
-import Link from "next/link";
 
 const Home: NextPage = () => {
   // - FOFO
-  let tokenCredential: AzureCommunicationTokenCredential;
-  let callAgent: CallAgent;
 
   // - States
   const [userAccessToken, setUserAccesToken] = useState("");
@@ -25,18 +20,32 @@ const Home: NextPage = () => {
     setAccessTokenInput(e.target.value);
   };
 
-  const handleStartCall = async () => {
-    const callClient = new CallClient();
-    try {
-      tokenCredential = new AzureCommunicationTokenCredential(userAccessToken);
-      callAgent = await callClient.createCallAgent(tokenCredential);
-      setCallendEnabled(true);
-    } catch (error) {
-      window.alert("Please submit a valid token!");
-    }
-  };
+  var handleEndCall = async () => { };
 
-  const handleEndCall = () => { };
+  const handleStartCall = async () => {
+    if (typeof window !== "undefined") {
+      console.log("calling")
+
+      const calling = await import('@azure/communication-calling')
+      const commsCommon = await import('@azure/communication-common')
+
+      const callClient = new calling.CallClient();
+      try {
+        var tokenCredential = new commsCommon.AzureCommunicationTokenCredential(userAccessToken);
+        var callAgent = await callClient.createCallAgent(tokenCredential);
+        setCallendEnabled(true);
+      } catch (error) {
+        window.alert("Please submit a valid token!");
+      }
+    } else {
+      // TODO Error 
+      console.log("failed calling, no window defined")
+    }
+  }
+
+  useEffect(() => {
+    // handleStartCall = ;
+  }, []);
 
   useEffect(() => {
     setCallControlsEnabled(userAccessToken != "");
