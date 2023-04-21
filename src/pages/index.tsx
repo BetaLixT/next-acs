@@ -1,7 +1,7 @@
 import { type NextPage } from "next";
 import Head from "next/head";
 import { ChangeEvent, useState, useEffect } from "react";
-import { CallAgent } from "@azure/communication-calling";
+import { CallAgent, Call } from "@azure/communication-calling";
 
 const Home: NextPage = () => {
   // - FOFO
@@ -17,6 +17,7 @@ const Home: NextPage = () => {
 
   // - ACS call states
   const [callAgent, setCallAgent] = useState<CallAgent | null>(null);
+  const [call, setCall] = useState<Call | null>(null);
 
   // - Control
 
@@ -66,19 +67,26 @@ const Home: NextPage = () => {
     setgroupIdInput(e.target.value);
   };
 
-  var handleEndCall = async () => { };
-
   const handleStartCall = async () => {
     if (callAgent != null && groupIdInput != "") {
       try {
-        callAgent.join({ groupId: groupIdInput });
-        setCallendEnabled(true);
+        var c = callAgent.join({ groupId: groupIdInput });
+        setCall(c);
       } catch (error) {
         // TODO error handling
-        setCallendEnabled(false);
+        window.alert("failed to create call!");
       }
     } else {
       // TODO error handling
+      window.alert("group id to be provided");
+    }
+  };
+
+  var handleEndCall = async () => {
+    if (call != null) {
+      await call.hangUp();
+      call.dispose();
+      setCall(null);
     }
   };
 
@@ -97,6 +105,14 @@ const Home: NextPage = () => {
       setCallControlsEnabled(true);
     }
   }, [callAgent]);
+
+  useEffect(() => {
+    if (call == null) {
+      setCallendEnabled(false);
+    } else {
+      setCallendEnabled(true);
+    }
+  }, [call]);
 
   // - View
   return (
@@ -141,7 +157,7 @@ const Home: NextPage = () => {
                 disabled={!callControlsEnabled && callendEnabled}
                 onChange={handleGroupIdInputChange}
                 value={groupIdInput}
-                placeholder="Who would you like to call?"
+                placeholder="Group Id"
               />
               <div>
                 <button
@@ -151,7 +167,7 @@ const Home: NextPage = () => {
                   className="rounded-full bg-[#53ad77] px-3 py-1 hover:bg-[#4a9c6b] disabled:bg-[#316847]"
                   onClick={handleStartCall}
                 >
-                  Start Call
+                  Join Call
                 </button>
                 &nbsp;
                 <button
