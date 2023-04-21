@@ -1,55 +1,102 @@
 import { type NextPage } from "next";
 import Head from "next/head";
 import { ChangeEvent, useState, useEffect } from "react";
+import { CallAgent } from "@azure/communication-calling";
 
 const Home: NextPage = () => {
   // - FOFO
 
+  // - Input states
+  const [accessTokenInput, setAccessTokenInput] = useState("");
+  const [groupIdInput, setgroupIdInput] = useState("");
+
   // - States
   const [userAccessToken, setUserAccesToken] = useState("");
-  const [accessTokenInput, setAccessTokenInput] = useState("");
   const [callControlsEnabled, setCallControlsEnabled] = useState(false);
   const [callendEnabled, setCallendEnabled] = useState(false);
 
+  // - ACS call states
+  const [callAgent, setCallAgent] = useState<CallAgent | null>(null);
+
   // - Control
+
+  const initializeCallAgent = async (token: string) => {
+    console.log("initializing call agent");
+
+    const calling = await import("@azure/communication-calling");
+    const commsCommon = await import("@azure/communication-common");
+
+    if (callAgent != null) {
+      await callAgent.dispose();
+      console.log("call agent disposed");
+      setCallAgent(null);
+    }
+
+    if (token == "") {
+      return;
+    }
+
+    const callClient = new calling.CallClient();
+    try {
+      console.log("initializing with token", token);
+      var tokenCredential = new commsCommon.AzureCommunicationTokenCredential(
+        token
+      );
+      var ca = await callClient.createCallAgent(tokenCredential);
+
+      setCallAgent(ca);
+    } catch (error) {
+      console.log("failed to create call agent", error);
+      setAccessTokenInput("");
+      setUserAccesToken("");
+      window.alert("Please submit a valid token!");
+    }
+  };
+
   var submitToken = function() {
     setUserAccesToken(accessTokenInput);
   };
 
+  // - Input handling
   const handleTokenInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     setAccessTokenInput(e.target.value);
+  };
+
+  const handleGroupIdInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setgroupIdInput(e.target.value);
   };
 
   var handleEndCall = async () => { };
 
   const handleStartCall = async () => {
-    if (typeof window !== "undefined") {
-      console.log("calling")
-
-      const calling = await import('@azure/communication-calling')
-      const commsCommon = await import('@azure/communication-common')
-
-      const callClient = new calling.CallClient();
+    if (callAgent != null && groupIdInput != "") {
       try {
-        var tokenCredential = new commsCommon.AzureCommunicationTokenCredential(userAccessToken);
-        var callAgent = await callClient.createCallAgent(tokenCredential);
+        callAgent.join({ groupId: groupIdInput });
         setCallendEnabled(true);
       } catch (error) {
-        window.alert("Please submit a valid token!");
+        // TODO error handling
+        setCallendEnabled(false);
       }
     } else {
-      // TODO Error 
-      console.log("failed calling, no window defined")
+      // TODO error handling
     }
-  }
+  };
 
   useEffect(() => {
     // handleStartCall = ;
   }, []);
 
   useEffect(() => {
-    setCallControlsEnabled(userAccessToken != "");
+    initializeCallAgent(userAccessToken);
   }, [userAccessToken]);
+
+  useEffect(() => {
+    if (callAgent == null) {
+      setCallControlsEnabled(false);
+    } else {
+      setCallControlsEnabled(true);
+    }
+  }, [callAgent]);
 
   // - View
   return (
@@ -92,6 +139,8 @@ const Home: NextPage = () => {
                 id="callee-id-input"
                 type="text"
                 disabled={!callControlsEnabled && callendEnabled}
+                onChange={handleGroupIdInputChange}
+                value={groupIdInput}
                 placeholder="Who would you like to call?"
               />
               <div>
