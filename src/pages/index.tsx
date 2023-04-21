@@ -1,7 +1,8 @@
 import { type NextPage } from "next";
 import Head from "next/head";
 import { ChangeEvent, useState, useEffect } from "react";
-import { CallAgent, Call } from "@azure/communication-calling";
+import { CallClient, DeviceManager, CallAgent, Call, LocalVideoStream, VideoStreamRenderer } from "@azure/communication-calling";
+import { AzureCommunicationTokenCredential } from "@azure/communication-common"
 
 const Home: NextPage = () => {
   // - FOFO
@@ -16,6 +17,8 @@ const Home: NextPage = () => {
   const [callendEnabled, setCallendEnabled] = useState(false);
 
   // - ACS call states
+  const [callClient, setCallClient] = useState<CallClient | null>(null);
+  const [deviceManager, setDeviceManager] = useState<DeviceManager | null>(null);
   const [callAgent, setCallAgent] = useState<CallAgent | null>(null);
   const [call, setCall] = useState<Call | null>(null);
 
@@ -23,9 +26,6 @@ const Home: NextPage = () => {
 
   const initializeCallAgent = async (token: string) => {
     console.log("initializing call agent");
-
-    const calling = await import("@azure/communication-calling");
-    const commsCommon = await import("@azure/communication-common");
 
     if (callAgent != null) {
       await callAgent.dispose();
@@ -37,16 +37,19 @@ const Home: NextPage = () => {
       return;
     }
 
-    const callClient = new calling.CallClient();
     try {
+      if (callClient == null) {
+        throw "call client was null";
+      }
       console.log("initializing with token", token);
-      var tokenCredential = new commsCommon.AzureCommunicationTokenCredential(
+      var tokenCredential = new AzureCommunicationTokenCredential(
         token
       );
       var ca = await callClient.createCallAgent(tokenCredential);
 
       setCallAgent(ca);
     } catch (error) {
+      // TODO error handling
       console.log("failed to create call agent", error);
       setAccessTokenInput("");
       setUserAccesToken("");
@@ -90,9 +93,54 @@ const Home: NextPage = () => {
     }
   };
 
+  const initializeCallClient = async () => {
+    const calling = await import("@azure/communication-calling");
+    // const commsCommon = await import("@azure/communication-common");
+
+    const cc = new calling.CallClient();
+    const dm = await cc.getDeviceManager();
+
+    setCallClient(cc)
+    if (dm != undefined) {
+      await dm.askDevicePermission({ video: true, audio: true });
+      // await dm.askDevicePermission({ video: false, audio: true });
+      setDeviceManager(dm)
+    }
+
+  }
+
+  // -- Media handling
+  const createLocalVideoStream = async () => {
+    if (deviceManager == null) {
+      console.error(`device manager is null`);
+      return
+    }
+
+    const camera = (await deviceManager.getCameras())[0];
+    if (camera) {
+      return new LocalVideoStream(camera);
+    } else {
+      console.error(`No camera device found on the system`);
+    }
+  }
+
+
+  const displayLocalVideoStream = async () => {
+    try {
+      // localVideoStreamRenderer = new VideoStreamRenderer(localVideoStream);
+      // const view = await localVideoStreamRenderer.createView();
+      // localVideoContainer.hidden = false;
+      // localVideoContainer.appendChild(view.target);
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
   useEffect(() => {
-    // handleStartCall = ;
-  }, []);
+    if (callClient == null) {
+      initializeCallClient()
+    }
+  }, [callClient]);
 
   useEffect(() => {
     initializeCallAgent(userAccessToken);
