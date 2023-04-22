@@ -177,8 +177,26 @@ const Home: NextPage = () => {
           console.log("Remote participant removed from the call.");
         });
       });
+
+      turnOnCammera(call);
     } catch (error) {
       console.error(error);
+    }
+  };
+
+  const turnOnCammera = async (call: Call) => {
+    if (deviceManager == null) {
+      // TODO handle error
+    } else {
+      const camera = (await deviceManager.getCameras())[0];
+      if (camera) {
+        const calling = await import("@azure/communication-calling");
+        const lvs = new calling.LocalVideoStream(camera);
+        call.startVideo(lvs);
+      } else {
+        // TODO: handle error
+        console.log("no cammera found");
+      }
     }
   };
 
@@ -279,22 +297,18 @@ const Home: NextPage = () => {
 
     try {
       await deviceManager.askDevicePermission({ video: true, audio: true });
-      const camera = (await deviceManager.getCameras())[0];
-      if (camera) {
-        const lvsr = new calling.VideoStreamRenderer(lvs);
-        const lvContainer = document.getElementById(localVideoContainerId);
-        if (lvContainer != null) {
-          const v = await lvsr.createView();
-          lvContainer.appendChild(v.target);
-        } else {
-          // TODO error handling
-          console.log("lv container was missing");
-        }
-        setLocalVideoStream(lvs);
-        setLocalVideoStreamRenderer(lvsr);
+
+      const lvsr = new calling.VideoStreamRenderer(lvs);
+      const lvContainer = document.getElementById(localVideoContainerId);
+      if (lvContainer != null) {
+        const v = await lvsr.createView();
+        lvContainer.appendChild(v.target);
       } else {
-        console.error(`No camera device found on the system`);
+        // TODO error handling
+        console.log("lv container was missing");
       }
+      setLocalVideoStream(lvs);
+      setLocalVideoStreamRenderer(lvsr);
     } catch (error) {
       console.error(error);
     }
