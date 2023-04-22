@@ -410,7 +410,7 @@ const Home: NextPage = () => {
                   id="hang-up-button"
                   type="button"
                   disabled={!callControlsEnabled || !callendEnabled}
-                  className="rounded-full bg-[#53ad77] px-3 py-1 hover:bg-[#4a9c6b] disabled:bg-[#316847]"
+                  className="rounded-full bg-[#f44336] px-3 py-1 hover:bg-[#f0584d] disabled:bg-[#b5372d]"
                   onClick={handleEndCall}
                 >
                   Hang Up
