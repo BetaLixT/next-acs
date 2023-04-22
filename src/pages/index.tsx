@@ -1,10 +1,20 @@
 import { type NextPage } from "next";
 import Head from "next/head";
 import { ChangeEvent, useState, useEffect } from "react";
-import { CallClient, DeviceManager, CallAgent, Call, LocalVideoStream, VideoStreamRenderer } from "@azure/communication-calling";
-import { AzureCommunicationTokenCredential } from "@azure/communication-common"
+import {
+  CallClient,
+  DeviceManager,
+  CallAgent,
+  Call,
+  LocalVideoStream,
+  VideoStreamRenderer,
+} from "@azure/communication-calling";
+import { AzureCommunicationTokenCredential } from "@azure/communication-common";
 
 const Home: NextPage = () => {
+  // - Constants
+  const localVideoContainerId = "lvContainer";
+
   // - FOFO
 
   // - Input states
@@ -18,7 +28,11 @@ const Home: NextPage = () => {
 
   // - ACS call states
   const [callClient, setCallClient] = useState<CallClient | null>(null);
-  const [deviceManager, setDeviceManager] = useState<DeviceManager | null>(null);
+  const [deviceManager, setDeviceManager] = useState<DeviceManager | null>(
+    null
+  );
+  const [localVideoStream, setLocalVideoStream] =
+    useState<LocalVideoStream | null>(null);
   const [callAgent, setCallAgent] = useState<CallAgent | null>(null);
   const [call, setCall] = useState<Call | null>(null);
 
@@ -42,9 +56,7 @@ const Home: NextPage = () => {
         throw "call client was null";
       }
       console.log("initializing with token", token);
-      var tokenCredential = new AzureCommunicationTokenCredential(
-        token
-      );
+      var tokenCredential = new AzureCommunicationTokenCredential(token);
       var ca = await callClient.createCallAgent(tokenCredential);
 
       setCallAgent(ca);
@@ -100,45 +112,46 @@ const Home: NextPage = () => {
     const cc = new calling.CallClient();
     const dm = await cc.getDeviceManager();
 
-    setCallClient(cc)
+    setCallClient(cc);
     if (dm != undefined) {
       await dm.askDevicePermission({ video: true, audio: true });
+      const camera = (await dm.getCameras())[0];
+      if (camera) {
+        const lvs = new calling.LocalVideoStream(camera);
+        const localVideoStreamRenderer = new calling.VideoStreamRenderer(lvs);
+        const lvContainer = document.getElementById(localVideoContainerId);
+        if (lvContainer != null) {
+          const v = await localVideoStreamRenderer.createView();
+          lvContainer.appendChild(v.target);
+        } else {
+          // TODO error handling
+          console.log("lv container was missing");
+        }
+        setLocalVideoStream(lvs);
+      } else {
+        console.error(`No camera device found on the system`);
+      }
       // await dm.askDevicePermission({ video: false, audio: true });
-      setDeviceManager(dm)
+      setDeviceManager(dm);
     }
+  };
 
-  }
-
-  // -- Media handling
-  const createLocalVideoStream = async () => {
-    if (deviceManager == null) {
-      console.error(`device manager is null`);
-      return
-    }
-
-    const camera = (await deviceManager.getCameras())[0];
-    if (camera) {
-      return new LocalVideoStream(camera);
-    } else {
-      console.error(`No camera device found on the system`);
-    }
-  }
-
+  // -- Media handlinG
 
   const displayLocalVideoStream = async () => {
     try {
-      // localVideoStreamRenderer = new VideoStreamRenderer(localVideoStream);
+      //
       // const view = await localVideoStreamRenderer.createView();
       // localVideoContainer.hidden = false;
       // localVideoContainer.appendChild(view.target);
     } catch (error) {
       console.error(error);
     }
-  }
+  };
 
   useEffect(() => {
     if (callClient == null) {
-      initializeCallClient()
+      initializeCallClient();
     }
   }, [callClient]);
 
@@ -229,6 +242,10 @@ const Home: NextPage = () => {
                 </button>
               </div>
             </div>
+          </div>
+
+          <div className="container flex flex-col items-center justify-center gap-12 rounded-lg bg-slate-900 px-4 py-16">
+            <div id={localVideoContainerId}></div>
           </div>
         </div>
       </main>
