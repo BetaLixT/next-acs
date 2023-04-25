@@ -62,8 +62,8 @@ const Home: NextPage = () => {
         throw "call client was null";
       }
       console.log("initializing with token", token);
-      var tokenCredential = new AzureCommunicationTokenCredential(token);
-      var ca = await callClient.createCallAgent(tokenCredential);
+      const tokenCredential = new AzureCommunicationTokenCredential(token);
+      const ca = await callClient.createCallAgent(tokenCredential);
 
       setCallAgent(ca);
     } catch (error) {
@@ -75,7 +75,7 @@ const Home: NextPage = () => {
     }
   };
 
-  var submitToken = function() {
+  const submitToken = function() {
     setUserAccesToken(accessTokenInput);
   };
 
@@ -91,7 +91,7 @@ const Home: NextPage = () => {
   const handleStartCall = async () => {
     if (callAgent != null && groupIdInput != "") {
       try {
-        var c = callAgent.join({ groupId: groupIdInput });
+        const c = callAgent.join({ groupId: groupIdInput });
         subscribeToCall(c);
         setCall(c);
       } catch (error) {
@@ -104,7 +104,7 @@ const Home: NextPage = () => {
     }
   };
 
-  var handleEndCall = async () => {
+  const handleEndCall = async () => {
     if (call != null) {
       await call.hangUp();
       call.dispose();
